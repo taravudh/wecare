@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}View Reports - WeCare{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-8">
+            <h2 class="text-2xl font-bold text-white mb-2">Community Reports Dashboard</h2>
+            <p class="text-emerald-100">
+                Track and monitor community issue reports
+            </p>
+        </div>
+
+        <div class="p-6">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 cursor-pointer transition-all duration-200" onclick="filterByStatus('all')">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Total Reports</p>
+                            <p class="text-2xl font-bold text-gray-900" id="totalCount">{{ incidents|length }}</p>
+                        </div>
+                        <i class="fas fa-list text-gray-400"></i>
+                    </div>
+                </div>
+                <div class="p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 cursor-pointer transition-all duration-200" onclick="filterByStatus('pending')">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Pending</p>
+                            <p class="text-2xl font-bold text-gray-900" id="pendingCount">{{ incidents|selectattr('status', 'equalto', 'pending')|list|length }}</p>
+                        </div>
+                        <i class="fas fa-clock text-orange-500"></i>
+                    </div>
+                </div>
+                <div class="p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 cursor-pointer transition-all duration-200" onclick="filterByStatus('in_progress')">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">In Progress</p>
+                            <p class="text-2xl font-bold text-gray-900" id="progressCount">{{ incidents|selectattr('status', 'equalto', 'in_progress')|list|length }}</p>
+                        </div>
+                        <i class="fas fa-spinner text-blue-500"></i>
+                    </div>
+                </div>
+                <div class="p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 cursor-pointer transition-all duration-200" onclick="filterByStatus('resolved')">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Resolved</p>
+                            <p class="text-2xl font-bold text-gray-900" id="resolvedCount">{{ incidents|selectattr('status', 'equalto', 'resolved')|list|length }}</p>
+                        </div>
+                        <i class="fas fa-check-circle text-green-500"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                <div class="flex-1 relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search reports..."
+                        class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        onkeyup="filterReports()"
+                    />
+                </div>
+                <select id="statusFilter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" onchange="filterReports()">
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                </select>
+            </div>
+
+            <!-- Reports List -->
+            <div id="reportsList" class="space-y-4">
+                {% if incidents %}
+                    {% for incident in incidents %}
+                    <div class="incident-card bg-gray-50 rounded-lg p-6 hover:shadow-md transition-shadow duration-200" 
+                         data-status="{{ incident.status }}" 
+                         data-title="{{ incident.title.lower() }}" 
+                         data-description="{{ incident.description.lower() if incident.description else '' }}">
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ incident.title }}</h3>
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-200 text-gray-700 capitalize">
+                                        {{ incident.category }}
+                                    </span>
+                                </div>
+                                {% if incident.description %}
+                                <p class="text-gray-600 mb-3 line-clamp-2">{{ incident.description }}</p>
+                                {% endif %}
+                                
+                                <div class="flex flex-wrap gap-4 text-sm text-gray-500">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{ incident.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </div>
+                                    <div class="flex items-center">
+                                        <i class="fas fa-map-marker-alt mr-1"></i>
+                                        {{ "%.4f, %.4f"|format(incident.latitude, incident.longitude) }}
+                                    </div>
+                                    {% if incident.reporter_name %}
+                                    <div class="flex items-center">
+                                        <i class="fas fa-user mr-1"></i>
+                                        {{ incident.reporter_name }}
+                                    </div>
+                                    {% endif %}
+                                    {% if incident.assignee %}
+                                    <div class="flex items-center">
+                                        <i class="fas fa-user-check mr-1"></i>
+                                        Assigned to {{ incident.assignee.full_name }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 sm:mt-0 sm:ml-4 flex flex-col space-y-2">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border 
+                                    {% if incident.status == 'pending' %}bg-orange-100 text-orange-800 border-orange-200
+                                    {% elif incident.status == 'in_progress' %}bg-blue-100 text-blue-800 border-blue-200
+                                    {% elif incident.status == 'resolved' %}bg-green-100 text-green-800 border-green-200
+                                    {% elif incident.status == 'closed' %}bg-gray-100 text-gray-800 border-gray-200
+                                    {% else %}bg-gray-100 text-gray-800 border-gray-200{% endif %}">
+                                    {% if incident.status == 'pending' %}<i class="fas fa-clock mr-2"></i>
+                                    {% elif incident.status == 'in_progress' %}<i class="fas fa-spinner mr-2"></i>
+                                    {% elif incident.status == 'resolved' %}<i class="fas fa-check-circle mr-2"></i>
+                                    {% elif incident.status == 'closed' %}<i class="fas fa-times-circle mr-2"></i>
+                                    {% endif %}
+                                    <span class="capitalize">{{ incident.status.replace('_', ' ') }}</span>
+                                </span>
+                                
+                                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                    {% if incident.priority == 'low' %}bg-green-100 text-green-800
+                                    {% elif incident.priority == 'medium' %}bg-yellow-100 text-yellow-800
+                                    {% elif incident.priority == 'high' %}bg-orange-100 text-orange-800
+                                    {% elif incident.priority == 'urgent' %}bg-red-100 text-red-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ incident.priority.title() }} Priority
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <button class="text-emerald-600 hover:text-emerald-800 text-sm font-medium" 
+                                    onclick="showOnMap({{ incident.latitude }}, {{ incident.longitude }})">
+                                <i class="fas fa-map-marker-alt mr-1"></i>
+                                View on Map
+                            </button>
+                            
+                            <button class="text-gray-600 hover:text-gray-800 text-sm font-medium" 
+                                    onclick="showUpdates('{{ incident.id }}')">
+                                <i class="fas fa-history mr-1"></i>
+                                View Updates
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-12">
+                        <i class="fas fa-heart text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-600 mb-2">No reports found</p>
+                        <p class="text-sm text-gray-500">No community issues have been reported yet</p>
+                        <a href="{{ url_for('index') }}" class="inline-block mt-4 px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
+                            Report First Issue
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Map Modal -->
+<div id="mapModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full">
+        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Issue Location</h3>
+            <button onclick="closeMapModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="modalMap" class="h-96"></div>
+    </div>
+</div>
+
+<!-- Updates Modal -->
+<div id="updatesModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full">
+        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Issue Updates</h3>
+            <button onclick="closeUpdatesModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        <div id="updatesContent" class="p-6 max-h-96 overflow-y-auto">
+            <!-- Updates will be loaded here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let modalMap;
+    let modalMarker;
+
+    function filterReports() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const cards = document.querySelectorAll('.incident-card');
+
+        cards.forEach(card => {
+            const title = card.dataset.title;
+            const description = card.dataset.description;
+            const status = card.dataset.status;
+
+            const matchesSearch = title.includes(searchTerm) || description.includes(searchTerm);
+            const matchesStatus = statusFilter === 'all' || status === statusFilter;
+
+            if (matchesSearch && matchesStatus) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    function filterByStatus(status) {
+        document.getElementById('statusFilter').value = status;
+        filterReports();
+    }
+
+    function showOnMap(lat, lng) {
+        const modal = document.getElementById('mapModal');
+        modal.classList.remove('hidden');
+
+        if (!modalMap) {
+            modalMap = L.map('modalMap').setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(modalMap);
+        } else {
+            modalMap.setView([lat, lng], 15);
+        }
+
+        if (modalMarker) {
+            modalMap.removeLayer(modalMarker);
+        }
+
+        modalMarker = L.marker([lat, lng]).addTo(modalMap);
+        
+        // Invalidate size to fix display issues
+        setTimeout(() => {
+            modalMap.invalidateSize();
+        }, 100);
+    }
+
+    function closeMapModal() {
+        document.getElementById('mapModal').classList.add('hidden');
+    }
+
+    async function showUpdates(incidentId) {
+        const modal = document.getElementById('updatesModal');
+        const content = document.getElementById('updatesContent');
+        
+        try {
+            const response = await fetch(`/api/incident_updates/${incidentId}`);
+            const updates = await response.json();
+            
+            if (updates.length === 0) {
+                content.innerHTML = '<p class="text-gray-600 text-center">No updates available for this issue.</p>';
+            } else {
+                content.innerHTML = updates.map(update => `
+                    <div class="border-b border-gray-200 pb-4 mb-4 last:border-b-0">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium text-gray-900">${update.user_name}</span>
+                            <span class="text-sm text-gray-500">${new Date(update.created_at).toLocaleString()}</span>
+                        </div>
+                        <div class="text-sm text-gray-600 mb-2">
+                            Status: ${update.status_from || 'New'} → ${update.status_to}
+                        </div>
+                        ${update.notes ? `<p class="text-gray-700">${update.notes}</p>` : ''}
+                    </div>
+                `).join('');
+            }
+            
+            modal.classList.remove('hidden');
+        } catch (error) {
+            content.innerHTML = '<p class="text-red-600 text-center">Error loading updates.</p>';
+            modal.classList.remove('hidden');
+        }
+    }
+
+    function closeUpdatesModal() {
+        document.getElementById('updatesModal').classList.add('hidden');
+    }
+
+    // Close modals when clicking outside
+    document.getElementById('mapModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeMapModal();
+        }
+    });
+
+    document.getElementById('updatesModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeUpdatesModal();
+        }
+    });
+</script>
+{% endblock %}

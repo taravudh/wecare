@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Governor Dashboard - Municipal System{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-8 rounded-t-xl">
+            <h1 class="text-2xl font-bold text-white mb-2">Governor Dashboard</h1>
+            <p class="text-green-100">Municipal Operations Overview & Management</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-blue-600">Total Incidents</p>
+                            <p class="text-3xl font-bold text-blue-900">{{ stats.total_incidents }}</p>
+                        </div>
+                        <i class="fas fa-exclamation-circle text-blue-500 text-2xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-orange-50 to-orange-100 p-6 rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-orange-600">Pending</p>
+                            <p class="text-3xl font-bold text-orange-900">{{ stats.pending_incidents }}</p>
+                        </div>
+                        <i class="fas fa-clock text-orange-500 text-2xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-purple-50 to-purple-100 p-6 rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-purple-600">In Progress</p>
+                            <p class="text-3xl font-bold text-purple-900">{{ stats.in_progress_incidents }}</p>
+                        </div>
+                        <i class="fas fa-user-check text-purple-500 text-2xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-green-600">Resolved</p>
+                            <p class="text-3xl font-bold text-green-900">{{ stats.resolved_incidents }}</p>
+                        </div>
+                        <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Unassigned Incidents -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Unassigned Incidents</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4 max-h-96 overflow-y-auto">
+                    {% for incident in incidents %}
+                        {% if not incident.assigned_to %}
+                        <div class="p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 cursor-pointer transition-all duration-200"
+                             onclick="selectIncident('{{ incident.id }}', '{{ incident.title }}', '{{ incident.description }}', '{{ incident.priority }}')">
+                            <div class="flex items-start justify-between mb-2">
+                                <h4 class="font-medium text-gray-900">{{ incident.title }}</h4>
+                                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                    {% if incident.priority == 'urgent' %}bg-red-100 text-red-800
+                                    {% elif incident.priority == 'high' %}bg-orange-100 text-orange-800
+                                    {% elif incident.priority == 'medium' %}bg-yellow-100 text-yellow-800
+                                    {% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ incident.priority.title() }} Priority
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-2">{{ incident.description[:100] }}...</p>
+                            <div class="flex items-center justify-between text-xs text-gray-500">
+                                <span>{{ incident.category.title() }}</span>
+                                <span>{{ incident.created_at.strftime('%Y-%m-%d') }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment Panel -->
+        <div class="bg-white rounded-xl shadow-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Assign Incident</h3>
+            </div>
+            <div class="p-6">
+                <div id="assignmentPanel" class="hidden space-y-4">
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-2" id="selectedTitle"></h4>
+                        <p class="text-sm text-gray-600" id="selectedDescription"></p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Select Department
+                        </label>
+                        <select id="selectedDepartment" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" onchange="loadDepartmentOfficers()">
+                            <option value="">Select a department...</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Assign to Officer
+                        </label>
+                        <select id="selectedOfficer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            <option value="">Select a department first...</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Assignment Notes
+                        </label>
+                        <textarea id="assignmentNotes" rows="3" 
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                                  placeholder="Add any specific instructions or notes..."></textarea>
+                    </div>
+
+                    <button onclick="assignIncident()" 
+                            class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        Assign Incident
+                    </button>
+                </div>
+
+                <div id="noSelectionPanel" class="text-center py-8">
+                    <i class="fas fa-user-check text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-600">Select an incident to assign</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Overview -->
+    <div class="bg-white rounded-xl shadow-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Department Overview</h3>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for dept in departments %}
+                <div class="p-4 border border-gray-200 rounded-lg">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-medium text-gray-900">{{ dept.name }}</h4>
+                        <i class="fas fa-building text-gray-400"></i>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Officers:</span>
+                            <span class="font-medium">{{ dept.users|selectattr('role', 'equalto', 'officer')|list|length }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Incidents:</span>
+                            <span class="font-medium">{{ dept.incidents|length }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedIncidentId = null;
+
+    function selectIncident(id, title, description, priority) {
+        selectedIncidentId = id;
+        
+        // Update UI
+        document.getElementById('selectedTitle').textContent = title;
+        document.getElementById('selectedDescription').textContent = description;
+        
+        // Show assignment panel
+        document.getElementById('assignmentPanel').classList.remove('hidden');
+        document.getElementById('noSelectionPanel').classList.add('hidden');
+        
+        // Highlight selected incident
+        document.querySelectorAll('.border-gray-200').forEach(el => {
+            el.classList.remove('border-green-500', 'bg-green-50');
+            el.classList.add('border-gray-200');
+        });
+        
+        event.currentTarget.classList.remove('border-gray-200');
+        event.currentTarget.classList.add('border-green-500', 'bg-green-50');
+    }
+
+    async function loadDepartmentOfficers() {
+        const departmentId = document.getElementById('selectedDepartment').value;
+        const officerSelect = document.getElementById('selectedOfficer');
+        
+        if (!departmentId) {
+            officerSelect.innerHTML = '<option value="">Select a department first...</option>';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/departments/${departmentId}/officers`);
+            const officers = await response.json();
+            
+            officerSelect.innerHTML = '<option value="">Select an officer...</option>';
+            officers.forEach(officer => {
+                officerSelect.innerHTML += `<option value="${officer.id}">${officer.full_name}</option>`;
+            });
+        } catch (error) {
+            officerSelect.innerHTML = '<option value="">Error loading officers</option>';
+        }
+    }
+
+    async function assignIncident() {
+        const departmentId = document.getElementById('selectedDepartment').value;
+        const officerId = document.getElementById('selectedOfficer').value;
+        const notes = document.getElementById('assignmentNotes').value;
+
+        if (!selectedIncidentId || !departmentId || !officerId) {
+            alert('Please select both department and officer');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/assign_incident', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    incident_id: selectedIncidentId,
+                    assigned_to: officerId,
+                    department_id: departmentId,
+                    notes: notes
+                })
+            });
+
+            if (response.ok) {
+                showNotification('Incident assigned successfully!');
+                
+                // Reset form
+                selectedIncidentId = null;
+                document.getElementById('selectedDepartment').value = '';
+                document.getElementById('selectedOfficer').innerHTML = '<option value="">Select a department first...</option>';
+                document.getElementById('assignmentNotes').value = '';
+                document.getElementById('assignmentPanel').classList.add('hidden');
+                document.getElementById('noSelectionPanel').classList.remove('hidden');
+                
+                // Reload page to update data
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                const error = await response.json();
+                alert('Failed to assign incident: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        }
+    }
+</script>
+{% endblock %}

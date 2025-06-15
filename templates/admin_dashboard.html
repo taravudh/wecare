@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Municipal System{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-lg mb-6">
+        <div class="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-8 rounded-t-xl">
+            <h1 class="text-2xl font-bold text-white mb-2">Administrator Dashboard</h1>
+            <p class="text-purple-100">Municipal Incident Management System</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Total Incidents</p>
+                            <p class="text-3xl font-bold text-gray-900">{{ stats.total_incidents }}</p>
+                        </div>
+                        <i class="fas fa-exclamation-circle text-blue-500 text-2xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Pending</p>
+                            <p class="text-3xl font-bold text-orange-600">{{ stats.pending_incidents }}</p>
+                        </div>
+                        <i class="fas fa-clock text-orange-500 text-2xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">In Progress</p>
+                            <p class="text-3xl font-bold text-blue-600">{{ stats.in_progress_incidents }}</p>
+                        </div>
+                        <i class="fas fa-spinner text-blue-500 text-2xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Resolved</p>
+                            <p class="text-3xl font-bold text-green-600">{{ stats.resolved_incidents }}</p>
+                        </div>
+                        <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-white rounded-xl shadow-lg mb-6">
+        <div class="border-b border-gray-200">
+            <nav class="flex space-x-8 px-6" aria-label="Tabs">
+                <button onclick="showTab('incidents')" id="incidentsTab" 
+                        class="tab-button py-4 px-1 border-b-2 font-medium text-sm border-purple-500 text-purple-600">
+                    Incidents
+                </button>
+                <button onclick="showTab('users')" id="usersTab" 
+                        class="tab-button py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    User Management
+                </button>
+                <button onclick="showTab('departments')" id="departmentsTab" 
+                        class="tab-button py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    Departments
+                </button>
+            </nav>
+        </div>
+
+        <!-- Incidents Tab -->
+        <div id="incidentsContent" class="tab-content p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Recent Incidents -->
+                <div class="lg:col-span-2">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Incidents</h3>
+                    <div class="space-y-4">
+                        {% for incident in incidents[:10] %}
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900">{{ incident.title }}</h4>
+                                <p class="text-sm text-gray-600">{{ incident.description[:100] }}...</p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {{ incident.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    {% if incident.department %}
+                                        - {{ incident.department.name }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                    {% if incident.status == 'pending' %}bg-orange-100 text-orange-800
+                                    {% elif incident.status == 'in_progress' %}bg-blue-100 text-blue-800
+                                    {% elif incident.status == 'resolved' %}bg-green-100 text-green-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ incident.status.replace('_', ' ').title() }}
+                                </span>
+                                {% if not incident.assigned_to %}
+                                <button onclick="showAssignModal('{{ incident.id }}', '{{ incident.title }}')"
+                                        class="px-3 py-1 text-xs bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                                    Assign
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">System Overview</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Total Users</span>
+                            <span class="font-semibold">{{ stats.total_users }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Officers</span>
+                            <span class="font-semibold">{{ stats.officers }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Governors</span>
+                            <span class="font-semibold">{{ stats.governors }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Departments</span>
+                            <span class="font-semibold">{{ stats.total_departments }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="usersContent" class="tab-content p-6 hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">User Management</h3>
+                <button onclick="showCreateUserModal()" 
+                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    <i class="fas fa-plus mr-2"></i>Create User
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for user in users %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">{{ user.full_name }}</div>
+                                    <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                    {% if user.role == 'admin' %}bg-red-100 text-red-800
+                                    {% elif user.role == 'governor' %}bg-blue-100 text-blue-800
+                                    {% elif user.role == 'officer' %}bg-green-100 text-green-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ user.role.title() }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ user.department.name if user.department else 'None' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                    {% if user.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ 'Active' if user.is_active else 'Inactive' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="editUser('{{ user.id }}', '{{ user.full_name }}', '{{ user.email }}', '{{ user.role }}', '{{ user.department_id or '' }}')" 
+                                        class="text-purple-600 hover:text-purple-900 mr-3">Edit</button>
+                                {% if user.is_active %}
+                                <button onclick="deactivateUser('{{ user.id }}')" 
+                                        class="text-red-600 hover:text-red-900">Deactivate</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Departments Tab -->
+        <div id="departmentsContent" class="tab-content p-6 hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Department Management</h3>
+                <button onclick="showCreateDepartmentModal()" 
+                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    <i class="fas fa-plus mr-2"></i>Create Department
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for dept in departments %}
+                <div class="p-6 border border-gray-200 rounded-lg">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-medium text-gray-900">{{ dept.name }}</h4>
+                        <i class="fas fa-building text-gray-400"></i>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4">{{ dept.description }}</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Officers:</span>
+                            <span class="font-medium">{{ dept.users|selectattr('role', 'equalto', 'officer')|list|length }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Incidents:</span>
+                            <span class="font-medium">{{ dept.incidents|length }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Modal -->
+<div id="assignModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Assign Incident</h3>
+        </div>
+        <div class="p-6">
+            <div class="mb-4">
+                <h4 class="font-medium text-gray-900 mb-2" id="incidentTitle"></h4>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Select Department
+                </label>
+                <select id="assignDepartment" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" onchange="loadDepartmentOfficers()">
+                    <option value="">Select a department...</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Assign to Officer
+                </label>
+                <select id="assignOfficer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    <option value="">Select a department first...</option>
+                </select>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Assignment Notes
+                </label>
+                <textarea id="assignNotes" rows="3" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                          placeholder="Add any specific instructions or notes..."></textarea>
+            </div>
+
+            <div class="flex space-x-3">
+                <button onclick="assignIncident()" 
+                        class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    Assign
+                </button>
+                <button onclick="closeAssignModal()" 
+                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div id="createUserModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Create New User</h3>
+        </div>
+        <form id="createUserForm" class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                <input type="text" id="userFullName" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input type="email" id="userEmail" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                <select id="userRole" required onchange="toggleDepartmentField()"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    <option value="">Select role...</option>
+                    <option value="officer">Officer</option>
+                    <option value="governor">Governor</option>
+                    <option value="admin">Administrator</option>
+                </select>
+            </div>
+            <div id="departmentField" class="hidden">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                <select id="userDepartment" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    <option value="">Select department...</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input type="password" id="userPassword" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            </div>
+            <div class="flex space-x-3 pt-4">
+                <button type="submit" 
+                        class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    Create User
+                </button>
+                <button type="button" onclick="closeCreateUserModal()" 
+                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Create Department Modal -->
+<div id="createDepartmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Create New Department</h3>
+        </div>
+        <form id="createDepartmentForm" class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Department Name</label>
+                <input type="text" id="deptName" required 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea id="deptDescription" rows="3" 
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"></textarea>
+            </div>
+            <div class="flex space-x-3 pt-4">
+                <button type="submit" 
+                        class="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    Create Department
+                </button>
+                <button type="button" onclick="closeCreateDepartmentModal()" 
+                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentIncidentId = null;
+    let editingUserId = null;
+
+    // Tab Management
+    function showTab(tabName) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('border-purple-500', 'text-purple-600');
+            button.classList.add('border-transparent', 'text-gray-500');
+        });
+        
+        // Show selected tab content
+        document.getElementById(tabName + 'Content').classList.remove('hidden');
+        
+        // Add active class to selected tab
+        const activeTab = document.getElementById(tabName + 'Tab');
+        activeTab.classList.remove('border-transparent', 'text-gray-500');
+        activeTab.classList.add('border-purple-500', 'text-purple-600');
+    }
+
+    // Assignment Modal Functions
+    function showAssignModal(incidentId, incidentTitle) {
+        currentIncidentId = incidentId;
+        document.getElementById('incidentTitle').textContent = incidentTitle;
+        document.getElementById('assignModal').classList.remove('hidden');
+    }
+
+    function closeAssignModal() {
+        document.getElementById('assignModal').classList.add('hidden');
+        document.getElementById('assignDepartment').value = '';
+        document.getElementById('assignOfficer').innerHTML = '<option value="">Select a department first...</option>';
+        document.getElementById('assignNotes').value = '';
+        currentIncidentId = null;
+    }
+
+    async function loadDepartmentOfficers() {
+        const departmentId = document.getElementById('assignDepartment').value;
+        const officerSelect = document.getElementById('assignOfficer');
+        
+        if (!departmentId) {
+            officerSelect.innerHTML = '<option value="">Select a department first...</option>';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/departments/${departmentId}/officers`);
+            const officers = await response.json();
+            
+            officerSelect.innerHTML = '<option value="">Select an officer...</option>';
+            officers.forEach(officer => {
+                officerSelect.innerHTML += `<option value="${officer.id}">${officer.full_name}</option>`;
+            });
+        } catch (error) {
+            officerSelect.innerHTML = '<option value="">Error loading officers</option>';
+        }
+    }
+
+    async function assignIncident() {
+        const departmentId = document.getElementById('assignDepartment').value;
+        const officerId = document.getElementById('assignOfficer').value;
+        const notes = document.getElementById('assignNotes').value;
+
+        if (!departmentId || !officerId) {
+            alert('Please select both department and officer');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/assign_incident', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    incident_id: currentIncidentId,
+                    assigned_to: officerId,
+                    department_id: departmentId,
+                    notes: notes
+                })
+            });
+
+            if (response.ok) {
+                showNotification('Incident assigned successfully!');
+                closeAssignModal();
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                const error = await response.json();
+                alert('Failed to assign incident: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        }
+    }
+
+    // User Management Functions
+    function showCreateUserModal() {
+        document.getElementById('createUserModal').classList.remove('hidden');
+    }
+
+    function closeCreateUserModal() {
+        document.getElementById('createUserModal').classList.add('hidden');
+        document.getElementById('createUserForm').reset();
+        document.getElementById('departmentField').classList.add('hidden');
+        editingUserId = null;
+    }
+
+    function toggleDepartmentField() {
+        const role = document.getElementById('userRole').value;
+        const deptField = document.getElementById('departmentField');
+        
+        if (role === 'officer') {
+            deptField.classList.remove('hidden');
+        } else {
+            deptField.classList.add('hidden');
+        }
+    }
+
+    document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const userData = {
+            full_name: document.getElementById('userFullName').value,
+            email: document.getElementById('userEmail').value,
+            role: document.getElementById('userRole').value,
+            password: document.getElementById('userPassword').value,
+            department_id: document.getElementById('userDepartment').value || null
+        };
+
+        try {
+            const url = editingUserId ? `/api/users/${editingUserId}` : '/api/users';
+            const method = editingUserId ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData)
+            });
+
+            if (response.ok) {
+                showNotification(editingUserId ? 'User updated successfully!' : 'User created successfully!');
+                closeCreateUserModal();
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                const error = await response.json();
+                alert('Failed to save user: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        }
+    });
+
+    function editUser(userId, fullName, email, role, departmentId) {
+        editingUserId = userId;
+        document.getElementById('userFullName').value = fullName;
+        document.getElementById('userEmail').value = email;
+        document.getElementById('userRole').value = role;
+        document.getElementById('userDepartment').value = departmentId;
+        
+        toggleDepartmentField();
+        document.getElementById('userPassword').required = false;
+        document.getElementById('createUserModal').classList.remove('hidden');
+    }
+
+    async function deactivateUser(userId) {
+        if (!confirm('Are you sure you want to deactivate this user?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showNotification('User deactivated successfully!');
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                const error = await response.json();
+                alert('Failed to deactivate user: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        }
+    }
+
+    // Department Management Functions
+    function showCreateDepartmentModal() {
+        document.getElementById('createDepartmentModal').classList.remove('hidden');
+    }
+
+    function closeCreateDepartmentModal() {
+        document.getElementById('createDepartmentModal').classList.add('hidden');
+        document.getElementById('createDepartmentForm').reset();
+    }
+
+    document.getElementById('createDepartmentForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const deptData = {
+            name: document.getElementById('deptName').value,
+            description: document.getElementById('deptDescription').value
+        };
+
+        try {
+            const response = await fetch('/api/departments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(deptData)
+            });
+
+            if (response.ok) {
+                showNotification('Department created successfully!');
+                closeCreateDepartmentModal();
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                const error = await response.json();
+                alert('Failed to create department: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        }
+    });
+
+    // Close modals when clicking outside
+    document.getElementById('assignModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAssignModal();
+        }
+    });
+
+    document.getElementById('createUserModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCreateUserModal();
+        }
+    });
+
+    document.getElementById('createDepartmentModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCreateDepartmentModal();
+        }
+    });
+</script>
+{% endblock %}

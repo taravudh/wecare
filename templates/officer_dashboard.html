@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Officer Dashboard - Municipal System{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="bg-white rounded-xl shadow-lg mb-6">
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 rounded-t-xl">
+            <h1 class="text-2xl font-bold text-white mb-2">Officer Dashboard</h1>
+            <p class="text-blue-100">
+                Welcome back, {{ current_user.full_name }}
+                {% if current_user.department %} - {{ current_user.department.name }}{% endif %}
+            </p>
+        </div>
+
+        <!-- Stats -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-900">{{ assigned_incidents|length }}</p>
+                    <p class="text-sm text-gray-600">Total Assigned</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-orange-600">
+                        {{ assigned_incidents|selectattr('status', 'equalto', 'pending')|list|length }}
+                    </p>
+                    <p class="text-sm text-gray-600">Pending</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-blue-600">
+                        {{ assigned_incidents|selectattr('status', 'equalto', 'in_progress')|list|length }}
+                    </p>
+                    <p class="text-sm text-gray-600">In Progress</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-green-600">
+                        {{ assigned_incidents|selectattr('status', 'equalto', 'resolved')|list|length }}
+                    </p>
+                    <p class="text-sm text-gray-600">Resolved</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Incidents List -->
+        <div class="bg-white rounded-xl shadow-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">My Assigned Incidents</h3>
+            </div>
+            <div class="p-6">
+                {% if assigned_incidents %}
+                    <div class="space-y-4">
+                        {% for incident in assigned_incidents %}
+                        <div class="p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 cursor-pointer transition-all duration-200"
+                             onclick="selectIncident('{{ incident.id }}', '{{ incident.title }}', '{{ incident.description }}', '{{ incident.status }}')">
+                            <div class="flex items-start justify-between mb-2">
+                                <h4 class="font-medium text-gray-900">{{ incident.title }}</h4>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border 
+                                    {% if incident.status == 'pending' %}bg-orange-100 text-orange-800 border-orange-200
+                                    {% elif incident.status == 'in_progress' %}bg-blue-100 text-blue-800 border-blue-200
+                                    {% elif incident.status == 'resolved' %}bg-green-100 text-green-800 border-green-200
+                                    {% else %}bg-gray-100 text-gray-800 border-gray-200{% endif %}">
+                                    {% if incident.status == 'pending' %}<i class="fas fa-clock mr-1"></i>
+                                    {% elif incident.status == 'in_progress' %}<i class="fas fa-spinner mr-1"></i>
+                                    {% elif incident.status == 'resolved' %}<i class="fas fa-check-circle mr-1"></i>
+                                    {% endif %}
+                                    {{ incident.status.replace('_', ' ').title() }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-2">{{ incident.description[:100] }}...</p>
+                            <div class="flex items-center justify-between text-xs text-gray-500">
+                                <div class="flex items-center">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>
+                                    {{ "%.4f, %.4f"|format(incident.latitude, incident.longitude) }}
+                                </div>
+                                <span>{{ incident.created_at.strftime('%Y-%m-%d') }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-circle text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-600">No incidents assigned to you yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Incident Details -->
+        <div class="bg-white rounded-xl shadow-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Incident Details</h3>
+            </div>
+            <div class="p-6">
+                <div id="incidentDetails" class="hidden space-y-6">
+                    <!-- Incident Info -->
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-2" id="detailTitle"></h4>
+                        <p class="text-gray-600 mb-4" id="detailDescription"></p>
+                        
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="font-medium text-gray-700">Current Status:</span>
+                                <span id="detailStatus" class="ml-2 px-2 py-1 rounded-full text-xs"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Update Form -->
+                    <div class="border-t pt-6">
+                        <h5 class="font-medium text-gray-900 mb-3">Update Status</h5>
+                        <div class="space-y-3">
+                            <select id="newStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Select new status...</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                            
+                            <textarea id="updateNotes" rows="3" 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                      placeholder="Add notes about this update..."></textarea>
+                            
+                            <button onclick="updateStatus()" 
+                                    class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                Update Status
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Updates History -->
+                    <div class="border-t pt-6">
+                        <h5 class="font-medium text-gray-900 mb-3">Update History</h5>
+                        <div id="updatesHistory" class="space-y-3 max-h-64 overflow-y-auto">
+                            <!-- Updates will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="noSelection" class="text-center py-8">
+                    <i class="fas fa-comments text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-600">Select an incident to view details and update status</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedIncidentId = null;
+
+    function selectIncident(id, title, description, status) {
+        selectedIncidentId = id;
+        
+        // Update UI
+        document.getElementById('detailTitle').textContent = title;
+        document.getElementById('detailDescription').textContent = description;
+        
+        // Update status display
+        const statusSpan = document.getElementById('detailStatus');
+        statusSpan.textContent = status.replace('_', ' ').toUpperCase();
+        statusSpan.className = 'ml-2 px-2 py-1 rounded-full text-xs ';
+        
+        if (status === 'pending') {
+            statusSpan.className += 'bg-orange-100 text-orange-800';
+        } else if (status === 'in_progress') {
+            statusSpan.className += 'bg-blue-100 text-blue-800';
+        } else if (status === 'resolved') {
+            statusSpan.className += 'bg-green-100 text-green-800';
+        } else {
+            statusSpan.className += 'bg-gray-100 text-gray-800';
+        }
+        
+        // Show details panel
+        document.getElementById('incidentDetails').classList.remove('hidden');
+        document.getElementById('noSelection').classList.add('hidden');
+        
+        // Load updates history
+        loadUpdatesHistory(id);
+        
+        // Highlight selected incident
+        document.querySelectorAll('.border-gray-200').forEach(el => {
+            el.classList.remove('border-blue-500', 'bg-blue-50');
+            el.classList.add('border-gray-200');
+        });
+        
+        event.currentTarget.classList.remove('border-gray-200');
+        event.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+    }
+
+    async function loadUpdatesHistory(incidentId) {
+        try {
+            const response = await fetch(`/api/incident_updates/${incidentId}`);
+            const updates = await response.json();
+            
+            const historyDiv = document.getElementById('updatesHistory');
+            
+            if (updates.length === 0) {
+                historyDiv.innerHTML = '<p class="text-gray-600 text-sm">No updates yet.</p>';
+            } else {
+                historyDiv.innerHTML = updates.map(update => `
+                    <div class="p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-900">${update.user_name}</span>
+                            <span class="text-xs text-gray-500">${new Date(update.created_at).toLocaleString()}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-1">
+                            Status: ${update.status_from || 'New'} → ${update.status_to}
+                        </p>
+                        ${update.notes ? `<p class="text-sm text-gray-700">${update.notes}</p>` : ''}
+                    </div>
+                `).join('');
+            }
+        } catch (error) {
+            document.getElementById('updatesHistory').innerHTML = '<p class="text-red-600 text-sm">Error loading updates.</p>';
+        }
+    }
+
+    async function updateStatus() {
+        const newStatus = document.getElementById('newStatus').value;
+        const notes = document.getElementById('updateNotes').value;
+
+        if (!selectedIncidentId || !newStatus || !notes) {
+            alert('Please select a new status and add notes');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/incidents/${selectedIncidentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    status: newStatus,
+                    notes: notes
+                })
+            });
+
+            if (response.ok) {
+                showNotification('Status updated successfully!');
+                
+                // Reset form
+                document.getElementById('newStatus').value = '';
+                document.getElementById('updateNotes').value = '';
+                
+                // Reload page to update data
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                const error = await response.json();
+                alert('Failed to update status: ' + (error.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Network error. Please try again.');
+        }
+    }
+</script>
+{% endblock %}
