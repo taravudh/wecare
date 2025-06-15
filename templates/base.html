@@ -3,183 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}WeCare - Municipal Incident Management System{% endblock %}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .leaflet-container {
-            font-family: inherit;
-        }
-        .leaflet-popup-content-wrapper {
-            border-radius: 0.5rem;
-        }
-        .line-clamp-2 {
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-        }
-        .logo-container {
-            transition: all 0.3s ease;
-        }
-        .logo-container:hover {
-            transform: scale(1.05);
-        }
-    </style>
+    <title>WeCare</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen flex flex-col">
-    <header class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-4">
-                    <div class="flex-shrink-0 p-2 bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-lg">
-                        <i class="fas fa-heart text-white text-xl"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-bold text-gray-900">WeCare</h1>
-                        <p class="text-sm text-gray-500">Community Care Platform</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-center space-x-4">
-                    {% if current_user %}
-                        <!-- User Info -->
-                        <div class="hidden md:block text-right">
-                            <p class="text-sm font-medium text-gray-900">{{ current_user.full_name }}</p>
-                            <p class="text-xs text-gray-500">
-                                {{ current_user.role.title() }}
-                                {% if current_user.department %}
-                                    - {{ current_user.department.name }}
-                                {% endif %}
-                            </p>
-                        </div>
-                        
-                        <!-- Navigation based on role -->
-                        <nav class="hidden md:flex space-x-1">
-                            {% if current_user.role == 'admin' %}
-                                <a href="{{ url_for('admin_dashboard') }}" 
-                                   class="px-4 py-2 rounded-lg font-medium transition-all duration-200 
-                                          {% if request.endpoint == 'admin_dashboard' %}bg-emerald-100 text-emerald-700 shadow-sm{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %}">
-                                    Admin Dashboard
-                                </a>
-                            {% elif current_user.role == 'governor' %}
-                                <a href="{{ url_for('governor_dashboard') }}" 
-                                   class="px-4 py-2 rounded-lg font-medium transition-all duration-200 
-                                          {% if request.endpoint == 'governor_dashboard' %}bg-emerald-100 text-emerald-700 shadow-sm{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %}">
-                                    Governor Dashboard
-                                </a>
-                            {% elif current_user.role == 'officer' %}
-                                <a href="{{ url_for('officer_dashboard') }}" 
-                                   class="px-4 py-2 rounded-lg font-medium transition-all duration-200 
-                                          {% if request.endpoint == 'officer_dashboard' %}bg-emerald-100 text-emerald-700 shadow-sm{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %}">
-                                    My Assignments
-                                </a>
-                            {% endif %}
-                            
-                            <a href="{{ url_for('citizen_dashboard') }}" 
-                               class="px-4 py-2 rounded-lg font-medium transition-all duration-200 
-                                      {% if request.endpoint == 'citizen_dashboard' %}bg-emerald-100 text-emerald-700 shadow-sm{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %}">
-                                View Reports
-                            </a>
-                        </nav>
-                        
-                        <!-- Logout Button -->
-                        <a href="{{ url_for('logout') }}" 
-                           class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">
-                            <i class="fas fa-sign-out-alt"></i>
-                            <span class="hidden sm:inline">Logout</span>
-                        </a>
-                    {% else %}
-                        <!-- Public Navigation -->
-                        <nav class="flex space-x-1">
-                            <a href="{{ url_for('index') }}" 
-                               class="px-4 py-2 rounded-lg font-medium transition-all duration-200 
-                                      {% if request.endpoint == 'index' %}bg-emerald-100 text-emerald-700 shadow-sm{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %}">
-                                Report Issue
-                            </a>
-                            <a href="{{ url_for('citizen_dashboard') }}" 
-                               class="px-4 py-2 rounded-lg font-medium transition-all duration-200 
-                                      {% if request.endpoint == 'citizen_dashboard' %}bg-emerald-100 text-emerald-700 shadow-sm{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-50{% endif %}">
-                                View Reports
-                            </a>
-                        </nav>
-                        
-                        <!-- Staff Login Button -->
-                        <a href="{{ url_for('login') }}" 
-                           class="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
-                            <i class="fas fa-building"></i>
-                            <span>Staff Login</span>
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </header>
+<body class="bg-gray-100">
 
-    <main class="container mx-auto px-4 py-8 flex-grow">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-50 text-red-700 border border-red-200{% elif category == 'success' %}bg-green-50 text-green-700 border border-green-200{% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
-    </main>
+<header class="bg-white shadow" x-data="{ open: false }">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center">
+        <a href="/" class="text-xl font-bold text-blue-600">WeCare</a>
+      </div>
+      <div class="hidden md:flex items-center space-x-4">
+        <a href="/report" class="text-gray-700 hover:text-blue-500">Report Issue</a>
+        <a href="/reports" class="text-gray-700 hover:text-blue-500">View Reports</a>
+        <a href="/login" class="text-gray-700 hover:text-blue-500">Login</a>
+      </div>
+      <div class="md:hidden flex items-center">
+        <button @click="open = !open" class="text-gray-700 hover:text-blue-500 focus:outline-none">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path x-show="!open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16" />
+            <path x-show="open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <div class="mb-4 md:mb-0">
-                    <p class="text-sm font-medium text-gray-900 mb-1">WeCare</p>
-                    <p class="text-xs text-gray-500">Community Care Platform</p>
-                </div>
-                
-                <div class="text-center md:text-right">
-                    <p class="text-sm text-gray-600 mb-1">
-                        Developed by <span class="font-semibold text-emerald-600">The Mapper Co.,Ltd.</span>
-                    </p>
-                    <p class="text-xs text-gray-500">
-                        © {{ current_year or 2024 }} All rights reserved.
-                    </p>
-                </div>
-            </div>
-            
-            <div class="mt-4 pt-4 border-t border-gray-100">
-                <div class="flex flex-col sm:flex-row justify-between items-center text-xs text-gray-500">
-                    <p>Caring for our community together</p>
-                    <div class="flex space-x-4 mt-2 sm:mt-0">
-                        <span>Privacy Policy</span>
-                        <span>Terms of Service</span>
-                        <span>Contact Support</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </footer>
+  <!-- Mobile menu -->
+  <div x-show="open" class="md:hidden px-4 pt-2 pb-4 space-y-1 bg-gray-50">
+    <a href="/report" class="block text-gray-700 hover:text-blue-500">Report Issue</a>
+    <a href="/reports" class="block text-gray-700 hover:text-blue-500">View Reports</a>
+    <a href="/login" class="block text-gray-700 hover:text-blue-500">Login</a>
+  </div>
+</header>
 
-    <script>
-        // Global JavaScript functions
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-                type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
-            }`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 5000);
-        }
-    </script>
-    
-    {% block scripts %}{% endblock %}
+<main class="py-10">
+  <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
 </body>
 </html>
